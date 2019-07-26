@@ -65,4 +65,12 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
+    public static function getUserSession($userId) {
+        $result = User::select('users.id', 'users.userName', 'users.email', 'users.department', 'departments.departmentName')
+            ->leftJoin('departments', 'departments.id', '=', 'users.department')
+            ->where('users.id', $userId)
+            ->first();
+        return $result;
+    }
+
 }

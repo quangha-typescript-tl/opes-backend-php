@@ -34,7 +34,7 @@ class UserController extends Controller
         $token = JWTAuth::getToken();
         JWTAuth::invalidate($token);
         $code = config('constants.http_status.HTTP_GET_SUCCESS');
-        return $this->json_api('Logout', $code);
+        return response()->json('Logout', $code);
     }
 
     public function refreshToken()
@@ -58,6 +58,54 @@ class UserController extends Controller
             'token_type' => 'bearer',
             'expires_in' => Auth::guard()->factory()->getTTL() * 60
         ]);
+    }
+
+    public function getUserSession() {
+        $userId = JWTAuth::parseToken()->authenticate()->id;
+
+        $result = User::getUserSession($userId);
+
+        if ($result) {
+            $code = config('constants.http_status.HTTP_GET_SUCCESS');
+            $data = [
+                'user' => $result
+            ];
+            return response()->json($data, $code);
+        } else {
+            $message = trans('get userSession fail');
+            $code = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            return response()->json($message, $code);
+        }
+    }
+
+    public function changePassword() {
+        $validate =  Validator::make(Request::all(), [
+            'password' => 'required|min:6|max:16|regex:/(^[a-zA-Z0-9_]+$)/',
+            'passwordConfirm' => 'required|same:password',
+        ]);
+
+        if ($validate->fails()) {
+            $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = trans('validate fail');
+            return response()->json($message, $status);
+        }
+
+        $userId = JWTAuth::parseToken()->authenticate()->id;
+
+        $user = User::find($userId);
+        $user->password = bcrypt(Request::input('password'));
+
+        $result = $user->save();
+
+        if ($result) {
+            $message = 'change password success';
+            $code = config('constants.http_status.HTTP_POST_SUCCESS');
+            return response()->json($message, $code);
+        } else {
+            $message = 'change password user fail';
+            $code = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            return response()->json($message, $code);
+        }
     }
 
     public function registerUser()
@@ -105,11 +153,22 @@ class UserController extends Controller
 
     public function getUsers()
     {
-        $data = User::select('users.*', 'de.departmentName')
+        $result = User::select('users.*', 'de.departmentName')
             ->leftJoin('departments as de', 'de.id', '=', 'users.department')
             ->orderBy('userName')
             ->get();
-        return response()->json($data, 200);
+
+        if ($result) {
+            $data = [
+                'users' => $result
+            ];
+            $code = config('constants.http_status.HTTP_GET_SUCCESS');
+            return response()->json($data, $code);
+        } else {
+            $code = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = 'get list user fail';
+            return response()->json($message, $code);
+        }
     }
 
     public function getDetailUser()

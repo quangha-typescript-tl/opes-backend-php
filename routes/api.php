@@ -20,12 +20,13 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::post('login', 'UserController@login');
 Route::post('refreshToken', 'UserController@refreshToken');
 Route::post('logout', 'UserController@logout');
-Route::get('getListDepartment', 'DepartmentController@getListDepartment');
-
 
 Route::group(array('prefix' => 're'), function () {
 
     Route::group(array('middleware' => 'jwt.auth'), function () {
+
+        Route::get('getUserSession', 'UserController@getUserSession');
+        Route::post('changePassword', 'UserController@changePassword');
         Route::get('getDetailUser/{userId}', 'UserController@getDetailUser');
         Route::get('getUsers', 'UserController@getUsers');
         Route::post('addUsers', 'UserController@addUsers');

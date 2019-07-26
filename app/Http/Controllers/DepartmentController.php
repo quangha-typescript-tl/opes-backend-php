@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Request;
 use App\Department;
@@ -11,8 +12,12 @@ class DepartmentController extends Controller
 
     public function getDepartments()
     {
-        $result = Department::select('id', 'departmentName')->get();
-        return response()->json($result, 200);
+        $result = Department::get();
+
+        $data = [
+            'departments' => $result
+        ];
+        return response()->json($data, 200);
     }
 
     public function addDepartment()
@@ -61,30 +66,56 @@ class DepartmentController extends Controller
         }
 
         // find department
-        $department = Department::find(Request::input('departmentId'));
+        $departmentId = Request::input('departmentId');
+        $department = Department::find($departmentId);
         if (!$department) {
             $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
             $message = trans('department not found');
             return response()->json($message, $status);
         }
 
-        $result = $department->delete();
+        // find user
+        $users = User::where('department', $departmentId)->get();
 
-        if ($result) {
-            $status    = config('constants.http_status.HTTP_POST_SUCCESS');
-            $message = trans('delete department success');
-            return response()->json($message, $status);
-        } else {
-            $status    = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
-            $message = trans('delete department fail');
-            return response()->json($message, $status);
+        DB::beginTransaction();
+        try {
+            if ($users) {
+                foreach ($users as $user) {
+                    $userDelete = $user->delete();
+
+                    if (!$userDelete) {
+                        DB::rollback();
+                        $message = 'delete department fail';
+                        $code = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+                        return response()->json($message, $code);
+                    }
+                }
+            }
+
+            $result = $department->delete();
+            if ($result) {
+                DB::commit();
+                $status    = config('constants.http_status.HTTP_POST_SUCCESS');
+                $message = trans('delete department success');
+                return response()->json($message, $status);
+            } else {
+                DB::rollback();
+                $status    = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+                $message = trans('delete department fail');
+                return response()->json($message, $status);
+            }
+        } catch (\Exception $e) {
+            DB::rollback();
+            $code    = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = 'delete department fail';
+            return response()->json($message, $code);
         }
     }
 
     public function updateDepartment()
     {
         $validator = Validator::make(Request::all(), [
-            'departmentId' => 'required',
+            'id' => 'required',
             'departmentName' => 'required|max:255',
             'description' => 'max:255',
         ]);
@@ -96,7 +127,7 @@ class DepartmentController extends Controller
         }
 
         // find department
-        $department = Department::find(Request::input('departmentId'));
+        $department = Department::find(Request::input('id'));
         if (!$department) {
             $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
             $message = trans('department not found');
