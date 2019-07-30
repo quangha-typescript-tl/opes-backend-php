@@ -18,7 +18,25 @@ class UserController extends Controller
         $credentials = Request::only('email', 'password');
         try {
             if ($token = Auth::guard()->attempt($credentials)) {
-                return $this->respondWithToken($token);
+
+                $user = User::where('email', Request::input('email'))->first();
+
+                if ($user) {
+                    $user->status = 1;
+                    $userUpdate = $user->save();
+
+                    if ($userUpdate) {
+                        return $this->respondWithToken($token, $user);
+                    } else {
+                        $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+                        $message = trans('update status user fail');
+                        return response()->json($message, $status);
+                    }
+                } else {
+                    $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+                    $message = trans('user not found');
+                    return response()->json($message, $status);
+                }
             } else {
                 return response()->json(['invalid_email_or_password'], 422);
             }
@@ -29,8 +47,6 @@ class UserController extends Controller
 
     public function logout()
     {
-//        Auth::logout();
-//        return response()->json('Logout');
         $token = JWTAuth::getToken();
         JWTAuth::invalidate($token);
         $code = config('constants.http_status.HTTP_GET_SUCCESS');
@@ -39,21 +55,16 @@ class UserController extends Controller
 
     public function refreshToken()
     {
-//        $login_user = JWTAuth::getToken();
-//        return response()->json(['fff' => $login_user], 200);
-////        $user       = User::getEmailUser($data['email']);
-////        $new_token  = JWTAuth::fromUser($user);
-////        return $this->respondWithToken($new_token);
-///
         $data       = Request::input('data');
         $user       = User::getEmailUser($data['email']);
         $new_token  = JWTAuth::fromUser($user);
         return $this->respondWithToken($new_token);
     }
 
-    public function respondWithToken($token)
+    public function respondWithToken($token, $user)
     {
         return response()->json([
+            'user' => $user,
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => Auth::guard()->factory()->getTTL() * 60

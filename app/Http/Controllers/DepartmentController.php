@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\DB;
 use App\Department;
 
 class DepartmentController extends Controller
@@ -81,13 +82,14 @@ class DepartmentController extends Controller
         try {
             if ($users) {
                 foreach ($users as $user) {
-                    $userDelete = $user->delete();
+                    $user->department = null;
+                    $userUpdate = $user->save();
 
-                    if (!$userDelete) {
+                    if (!$userUpdate) {
                         DB::rollback();
-                        $message = 'delete department fail';
+                        $message = 'delete department fail 1';
                         $code = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
-                        return response()->json($message, $code);
+                        return response()->json($user, $code);
                     }
                 }
             }
@@ -101,7 +103,7 @@ class DepartmentController extends Controller
             } else {
                 DB::rollback();
                 $status    = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
-                $message = trans('delete department fail');
+                $message = trans('delete department fail 2');
                 return response()->json($message, $status);
             }
         } catch (\Exception $e) {
