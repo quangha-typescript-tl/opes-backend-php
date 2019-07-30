@@ -198,7 +198,7 @@ class UserController extends Controller
             $validate =  Validator::make($user, [
                 'userName' => 'required|min:6|max:255',
                 'email' => 'required|email',
-                'password' => 'required|min:6|max:16',
+//                'password' => 'required|min:6|max:16',
 //                'password_confirmation' => 'required|min:6|same:password',
                 'department' => 'required',
             ]);
@@ -210,6 +210,8 @@ class UserController extends Controller
                 break;
             }
         }
+
+        // Todo check email validate email
 
         $check_add_user = true;
         $message = '';
@@ -229,7 +231,8 @@ class UserController extends Controller
                 $newUser = new User();
                 $newUser->userName = $user['userName'];
                 $newUser->email = $user['email'];
-                $newUser->password = bcrypt($user['password']);
+                $newUser->temporaryPassword = '123456';
+                $newUser->password = bcrypt($newUser->temporaryPassword );
                 $newUser->department = $user['department'];
 
                 $result = $newUser->save();
