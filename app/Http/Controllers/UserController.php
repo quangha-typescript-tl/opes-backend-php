@@ -211,7 +211,19 @@ class UserController extends Controller
             }
         }
 
-        // Todo check email validate email
+        // check duplicate email
+        foreach ($users as $user) {
+            $userFi = array_filter($users, function($u) use ($user) {
+                return $u['email'] == $user['email'];
+            });
+
+            if (count($userFi) > 1) {
+                $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+                $message = trans('duplicate email');
+                return response()->json($message, $status);
+                break;
+            }
+        }
 
         $check_add_user = true;
         $message = '';
