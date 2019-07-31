@@ -164,11 +164,11 @@ class UserController extends Controller
 
     public function getUsers()
     {
-        $result = User::select('users.*', 'de.departmentName')
-            ->leftJoin('departments as de', 'de.id', '=', 'users.department')
-            ->orderBy('userName')
-            ->get();
+        $name = Request::input('name') ? Request::input('name') : '';
+        $department = Request::input('department') ? explode( ',', Request::input('department')) : '';
+        $status = !is_null(Request::input('status')) ? explode(',', Request::input('status')) : '';
 
+        $result = User::getUsers($name, $department, $status);
         if ($result) {
             $data = [
                 'users' => $result

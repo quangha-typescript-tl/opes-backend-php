@@ -65,7 +65,8 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-    public static function getUserSession($userId) {
+    public static function getUserSession($userId)
+    {
         $result = User::select('users.id', 'users.userName', 'users.email', 'users.department', 'departments.departmentName', 'users.avatar')
             ->leftJoin('departments', 'departments.id', '=', 'users.department')
             ->where('users.id', $userId)
@@ -73,4 +74,25 @@ class User extends Authenticatable implements JWTSubject
         return $result;
     }
 
+    public static function getUsers($name, $department, $status)
+    {
+        $result = User::where(function ($q) use ($name, $department, $status) {
+                $q->where(function ($query) use ($department) {
+                    if ($department) {
+                        $query->whereIn('department', $department);
+                    }
+                })->where(function ($query) use ($status) {
+                    if ($status) {
+                        $query->whereIn('status', $status);
+                    }
+                })->where(function ($query) use ($name) {
+                    if ($name) {
+                        $query->where('userName', 'like', '%' . $name . '%')
+                            ->orWhere('email', 'like', '%' . $name . '%');
+                    }
+                });
+            })
+            ->get();
+        return $result;
+    }
 }
