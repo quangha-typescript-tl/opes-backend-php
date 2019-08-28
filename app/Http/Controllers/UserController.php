@@ -22,16 +22,23 @@ class UserController extends Controller
                 $user = User::where('email', Request::input('email'))->first();
 
                 if ($user) {
-                    $user->status = 1;
-                    $userUpdate = $user->save();
-
-                    if ($userUpdate) {
-                        return $this->respondWithToken($token, $user);
-                    } else {
+                    if ($user->status == 2) {
                         $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
-                        $message = trans('update status user fail');
+                        $message = trans('user block');
                         return response()->json($message, $status);
                     }
+
+                    if ($user->status == 0) {
+                        $user->status = 1;
+                        $userUpdate = $user->save();
+                        if (!$userUpdate) {
+                            $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+                            $message = trans('update status user fail');
+                            return response()->json($message, $status);
+                        }
+                    }
+
+                    return $this->respondWithToken($token, $user);
                 } else {
                     $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
                     $message = trans('user not found');
@@ -75,6 +82,7 @@ class UserController extends Controller
         $userId = JWTAuth::parseToken()->authenticate()->id;
 
         $result = User::getUserSession($userId);
+        $result['authority'] = User::getAuthority($result['id']);
 
         if ($result) {
             $code = config('constants.http_status.HTTP_GET_SUCCESS');
@@ -239,11 +247,13 @@ class UserController extends Controller
                     $check_add_user = false;
                     break;
                 }
+                $permitted_chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+                $temporaryPassword = substr(str_shuffle($permitted_chars), 0, 10);
 
                 $newUser = new User();
                 $newUser->userName = $user['userName'];
                 $newUser->email = $user['email'];
-                $newUser->temporaryPassword = '123456';
+                $newUser->temporaryPassword = $temporaryPassword;
                 $newUser->password = bcrypt($newUser->temporaryPassword );
                 $newUser->department = $user['department'];
 
@@ -302,6 +312,40 @@ class UserController extends Controller
             } else {
                 $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
                 $message = trans('delete user fail');
+                return response()->json($message, $status);
+            }
+        }
+    }
+
+    public function setUserStatus() {
+        $validate =  Validator::make(Request::all(), [
+            'userId' => 'required',
+            'status' => 'required'
+        ]);
+
+        if ($validate->fails()) {
+            $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = trans('userId is null');
+            return response()->json($message, $status);
+        }
+
+        // find user
+        $user = User::find(Request::input('userId'));
+        if (!$user) {
+            $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = trans('user not found');
+            return response()->json($message, $status);
+        } else {
+            $user->status = Request::input('status');
+            $result = $user->save();
+
+            if ($result) {
+                $status = config('constants.http_status.HTTP_POST_SUCCESS');
+                $message = trans('set user status success');
+                return response()->json($message, $status);
+            } else {
+                $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+                $message = trans('set user status fail');
                 return response()->json($message, $status);
             }
         }

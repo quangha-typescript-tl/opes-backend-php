@@ -32,6 +32,8 @@ Route::group(array('prefix' => 're'), function () {
         Route::post('addUsers', 'UserController@addUsers');
         Route::post('registerUser', 'UserController@registerUser');
         Route::post('deleteUser', 'UserController@deleteUser');
+        Route::post('blockUser', 'UserController@blockUser');
+        Route::post('setUserStatus', 'UserController@setUserStatus');
         Route::post('updateUser', 'UserController@updateUser');
 
         Route::post('addDepartment', 'DepartmentController@addDepartment');
@@ -44,3 +46,21 @@ Route::group(array('prefix' => 're'), function () {
     });
 });
 
+Route::group(array('prefix' => 'co'), function () {
+
+    Route::group(array('middleware' => 'jwt.auth'), function () {
+
+        Route::get('getContents', 'ContentController@getContents');
+        Route::post('addContent', 'ContentController@addContent');
+        Route::post('editContent', 'ContentController@editContent');
+        Route::post('deleteContent', 'ContentController@deleteContent');
+        Route::post('uploadImageContent', 'ContentController@uploadImageContent');
+        Route::get('getDetailContent/{contentId}', 'ContentController@getDetailContent');
+        Route::get('getTopContentRelated', 'ContentController@getTopContentRelated');
+        Route::get('getListHashTag', 'HashTagController@getListHashTag');
+    });
+
+    Route::group([], function () {
+        //
+    });
+});
