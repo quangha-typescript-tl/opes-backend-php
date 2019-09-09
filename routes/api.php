@@ -18,7 +18,7 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 
 Route::post('login', 'UserController@login');
-Route::post('refreshToken', 'UserController@refreshToken');
+Route::get('refreshToken', 'UserController@refreshToken');
 Route::post('logout', 'UserController@logout');
 
 Route::group(array('prefix' => 're'), function () {

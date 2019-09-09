@@ -10,6 +10,7 @@ use App\Department;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Support\Facades\DB;
+use PeterPetrus\Auth\PassportToken;
 
 class UserController extends Controller
 {
@@ -62,10 +63,19 @@ class UserController extends Controller
 
     public function refreshToken()
     {
-        $data       = Request::input('data');
-        $user       = User::getEmailUser($data['email']);
-        $new_token  = JWTAuth::fromUser($user);
-        return $this->respondWithToken($new_token);
+        $access_token = Request::input('access_token');
+        $decodeToken = PassportToken::dirtyDecode($access_token);
+        $userId = $decodeToken['user_id'];
+        $user = User::find($userId);
+
+        if ($user) {
+            $new_token  = JWTAuth::fromUser($user);
+            return $this->respondWithToken($new_token, $user);
+        } else {
+            $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = trans('user not found');
+            return response()->json($message, $status);
+        }
     }
 
     public function respondWithToken($token, $user)
