@@ -18,11 +18,49 @@ class Content extends Model
         'title', 'description', 'public', 'content', 'image', 'user_created', 'created_at', 'updated_at'
     ];
 
-    public static function getContents($userId) {
-        $result = Content::where('public', 1)
-            ->orWhere(function ($query) use ($userId) {
-                $query->where('public', 0)->where('user_created', $userId);
+    public static function getContents($userId, $conditionSearch) {
+//        $result = Content::where('public', 1)
+//            ->orWhere(function ($query) use ($userId) {
+//                $query->where('public', 0)->where('user_created', $userId);
+//            })
+//            ->orderBy('updated_at', 'DESC')->get();
+        $result = Content::leftJoin('hash_tag_content', 'hash_tag_content.content_id', '=', 'contents.id')
+            ->where(function ($query) use ($conditionSearch) {
+                if (count($conditionSearch['hash_tag']) > 0) {
+                    $query->whereIn('hash_tag_content.hash_tag', $conditionSearch['hash_tag']);
+                }
             })
+            ->where(function ($query) use ($conditionSearch) {
+                switch ($conditionSearch['typeDatePost']) {
+                    case 6:
+                        $query->whereDate('contents.created_at', $conditionSearch['dateStart']);
+                        break;
+                    case 1: // before
+                        $query->whereDate('contents.created_at', '<', $conditionSearch['dateStart']);
+                        break;
+                    case 2:
+                        $query->whereDate('contents.created_at', '<=', $conditionSearch['dateStart']);
+                        break;
+                    case 3:
+                        $query->whereDate('contents.created_at', '>', $conditionSearch['dateStart']);
+                        break;
+                    case 4:
+                        $query->whereDate('contents.created_at', '>=', $conditionSearch['dateStart']);
+                        break;
+                    case 5:
+                        $query->whereDate('contents.created_at', '>=', $conditionSearch['dateStart'])
+                            ->whereDate('contents.created_at', '<=', $conditionSearch['dateEnd']);
+                        break;
+                    default:
+                        break;
+                }
+            })
+            ->where(function ($query) use ($userId) {
+                $query->where('public', 0)->where('user_created', $userId)
+                ->orWhere('public', 1);
+            })
+            ->select('contents.*')
+            ->distinct('contents.id')
             ->orderBy('updated_at', 'DESC')->get();
         return $result;
     }

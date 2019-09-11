@@ -17,8 +17,38 @@ class ContentController extends Controller
     public function getContents()
     {
         $login_user = JWTAuth::parseToken()->authenticate();
-        $contents = Content::getContents($login_user->id);
 
+        $conditionSearch = [
+            'hash_tag' => Request::input('hash_tag') ? $pieces = explode(",", Request::input('hash_tag')) : [],
+            'typeDatePost' => Request::input('typeDatePost') ? (int)Request::input('typeDatePost') : '',
+            'dateStart' => Request::input('dateStart') ? Carbon::parse(Request::input('dateStart'))->format('Y-m-d') : '',
+            'dateEnd' => Request::input('dateEnd') ? Carbon::parse(Request::input('dateEnd'))->format('Y-m-d') : '',
+        ];
+
+        $checkValidate = true;
+        if ($conditionSearch['typeDatePost'] > 0) {
+            if (!$conditionSearch['dateStart']) {
+                $checkValidate = false;
+            } else {
+                if ($conditionSearch['typeDatePost'] === 5) {
+                    if (!$conditionSearch['dateEnd']) {
+                        $checkValidate = false;
+                    } else {
+                        if (!Carbon::parse($conditionSearch['dateStart'])->lt(Carbon::parse($conditionSearch['dateEnd']))) {
+                            $checkValidate = false;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$checkValidate) {
+            $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = trans('validate fail');
+            return response()->json($message, $status);
+        }
+
+        $contents = Content::getContents($login_user->id, $conditionSearch);
         if ($contents) {
             foreach ($contents as $content) {
                 $hashTag = HashTagContent::select('hash_tag')->where('content_id', $content->id)->get();
@@ -161,6 +191,17 @@ class ContentController extends Controller
         if ($file) {
             $file->storeAs('/public/image-content', $file->getClientOriginalName());
         }
+    }
+
+    public function removeImageContent()
+    {
+        $imageUrl = Request::input('imageUrl');
+        if ($imageUrl && Storage::exists('public/image-content/' . $imageUrl)) {
+            Storage::delete('public/image-content/' . $imageUrl);
+        }
+        $status = config('constants.http_status.HTTP_POST_SUCCESS');
+        $message = trans('remove image url content');
+        return response()->json($message, $status);
     }
 
     public function editContent()

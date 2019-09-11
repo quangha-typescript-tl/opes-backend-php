@@ -55,6 +55,8 @@ Route::group(array('prefix' => 'co'), function () {
         Route::post('editContent', 'ContentController@editContent');
         Route::post('deleteContent', 'ContentController@deleteContent');
         Route::post('uploadImageContent', 'ContentController@uploadImageContent');
+        Route::post('removeImageContent', 'ContentController@removeImageContent');
+
         Route::get('getDetailContent/{contentId}', 'ContentController@getDetailContent');
         Route::get('getTopContentRelated', 'ContentController@getTopContentRelated');
         Route::get('getListHashTag', 'HashTagController@getListHashTag');
