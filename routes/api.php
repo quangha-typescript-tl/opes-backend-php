@@ -35,7 +35,8 @@ Route::group(array('prefix' => 're'), function () {
         Route::post('blockUser', 'UserController@blockUser');
         Route::post('setUserStatus', 'UserController@setUserStatus');
         Route::post('updateUser', 'UserController@updateUser');
-
+        Route::post('uploadUserAvatar', 'UserController@uploadUserAvatar');
+        Route::post('removeUserAvatar', 'UserController@removeUserAvatar');
         Route::post('addDepartment', 'DepartmentController@addDepartment');
         Route::post('updateDepartment', 'DepartmentController@updateDepartment');
         Route::post('deleteDepartment', 'DepartmentController@deleteDepartment');
@@ -58,6 +59,7 @@ Route::group(array('prefix' => 'co'), function () {
         Route::post('removeImageContent', 'ContentController@removeImageContent');
 
         Route::get('getDetailContent/{contentId}', 'ContentController@getDetailContent');
+        Route::get('getDetailContentUser', 'ContentController@getDetailContentUser');
         Route::get('getTopContentRelated', 'ContentController@getTopContentRelated');
         Route::get('getListHashTag', 'HashTagController@getListHashTag');
     });

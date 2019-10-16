@@ -18,7 +18,8 @@ class Content extends Model
         'title', 'description', 'public', 'content', 'image', 'user_created', 'created_at', 'updated_at'
     ];
 
-    public static function getContents($userId, $conditionSearch) {
+    public static function getContents($userId, $conditionSearch)
+    {
 //        $result = Content::where('public', 1)
 //            ->orWhere(function ($query) use ($userId) {
 //                $query->where('public', 0)->where('user_created', $userId);
@@ -56,8 +57,8 @@ class Content extends Model
                 }
             })
             ->where(function ($query) use ($userId) {
-                $query->where('public', 0)->where('user_created', $userId)
-                ->orWhere('public', 1);
+                $query->where('contents.public', 0)->where('contents.user_created', $userId)
+                ->orWhere('contents.public', 1);
             })
             ->select('contents.*')
             ->distinct('contents.id')
@@ -65,7 +66,50 @@ class Content extends Model
         return $result;
     }
 
-    public static function getTopContentRelated($content, $loginUser, $limitContentRelated) {
+    public static function getDetailContent($id)
+    {
+        $result = Content::leftJoin('users', 'users.id', '=', 'contents.user_created')
+            ->where('contents.id', $id)
+            ->select('contents.*', 'users.userName', 'users.avatar')
+            ->first();
+
+        return $result;
+    }
+
+    public static function getDetailContentUser($loginUser, $userId, $hashTag, $page, $size)
+    {
+        $result = Content::leftJoin('hash_tag_content', 'hash_tag_content.content_id', '=', 'contents.id')
+            ->leftJoin('users', 'users.id', '=', 'contents.user_created')
+            ->where(function ($query) use ($loginUser, $userId) {
+
+                if ($loginUser->id === $userId) {
+                    $query->where(function ($q) use ($userId) {
+                        $q->where('contents.public', 0)->where('contents.user_created', $userId);
+                    })->orWhere('contents.public', 1);
+                } else {
+                    $query->where('contents.public', 1);
+                }
+            })
+            ->where(function ($query) use ($hashTag) {
+                if ($hashTag) {
+                    $query->where('hash_tag_content.hash_tag', $hashTag);
+                }
+            })
+            ->where(function ($query) use ($userId) {
+                if ($userId) {
+                    $query->where('contents.user_created', $userId);
+                }
+            })
+            ->select('contents.*', 'users.userName', 'users.avatar')
+            ->distinct('contents.id')
+            ->offset($page * $size)
+            ->limit($size)
+            ->orderBy('updated_at', 'DESC')->get();
+        return $result;
+    }
+
+    public static function getTopContentRelated($content, $loginUser, $limitContentRelated)
+    {
         $hashTags = [];
         $hashTag = HashTagContent::where('content_id', $content->id)->get();
         if ($hashTag) {
@@ -94,7 +138,8 @@ class Content extends Model
         return $result;
     }
 
-    public static function getTopContentsSearch($userId, $limitContent, $listContentId) {
+    public static function getTopContentsSearch($userId, $limitContent, $listContentId)
+    {
         $result = Content::where(function ($query) use ($userId) {
                 $query->where(function ($q) use ($userId) {
                     $q->where('public', 0)->where('user_created', $userId);
@@ -106,7 +151,8 @@ class Content extends Model
         return $result;
     }
 
-    public static function getTopContents($userId, $limitContentRelated) {
+    public static function getTopContents($userId, $limitContentRelated)
+    {
         $result = Content::where('public', 1)
             ->orWhere(function ($query) use ($userId) {
                 $query->where('public', 0)->where('user_created', $userId);

@@ -77,28 +77,62 @@ class ContentController extends Controller
 
     public function getDetailContent($contentId)
     {
-        $content = Content::find($contentId);
+//        $content = Content::find($contentId);
+        $content = Content::getDetailContent($contentId);
         if ($content) {
 
-            $hashTag = HashTagContent::select('hash_tag')->where('content_id', $content->id)->get();
-            if ($hashTag) {
-                $content->created_at = Carbon::parse($content->created_at)->format('Y-m-d\TH:i:sP');
-                $content->updated_at = Carbon::parse($content->updated_at)->format('Y-m-d\TH:i:sP');
-                $content->hash_tag = $hashTag;
+            $content->created_at = Carbon::parse($content->created_at)->format('Y-m-d\TH:i:sP');
+            $content->updated_at = Carbon::parse($content->updated_at)->format('Y-m-d\TH:i:sP');
 
-                $result = [
-                    'content' => $content
-                ];
-                $status = config('constants.http_status.HTTP_GET_SUCCESS');
-                return response()->json($result, $status);
-            } else {
-                $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
-                $message = trans('get content fail');
-                return response()->json($message, $status);
-            }
+            $hashTag = HashTagContent::select('hash_tag')->where('content_id', $content->id)->get();
+            $content->hash_tag = $hashTag ? $hashTag : [];
+
+            $result = [
+                'content' => $content
+            ];
+            $status = config('constants.http_status.HTTP_GET_SUCCESS');
+            return response()->json($result, $status);
         } else {
             $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
             $message = trans('get content fail');
+            return response()->json($message, $status);
+        }
+    }
+
+    public function getDetailContentUser() {
+        $validate =  Validator::make(Request::all(), [
+            'page' => 'required',
+            'size' => 'required'
+        ]);
+        if ($validate->fails()) {
+            $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = trans('validate is fail');
+            return response()->json($message, $status);
+        }
+
+        $login_user = JWTAuth::parseToken()->authenticate();
+        $userId = Request::input('userId');
+        $hashTag = Request::input('hashTag');
+        $page = Request::input('page');
+        $size = Request::input('size');
+        $contents = Content::getDetailContentUser($login_user, $userId, $hashTag, $page, $size);
+
+        if ($contents) {
+
+            foreach ($contents as $content) {
+                $content->created_at = Carbon::parse($content->created_at)->format('Y-m-d\TH:i:sP');
+                $content->updated_at = Carbon::parse($content->updated_at)->format('Y-m-d\TH:i:sP');
+                $hashTag = HashTagContent::select('hash_tag')->where('content_id', $content->id)->get();
+                $content->hash_tag = $hashTag ? $hashTag : [];
+            }
+            $data = [
+                'contents' => $contents
+            ];
+            $status = config('constants.http_status.HTTP_GET_SUCCESS');
+            return response()->json($data, $status);
+        } else {
+            $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = trans('get contents fail');
             return response()->json($message, $status);
         }
     }

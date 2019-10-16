@@ -76,7 +76,8 @@ class User extends Authenticatable implements JWTSubject
 
     public static function getUsers($name, $department, $status)
     {
-        $result = User::where(function ($q) use ($name, $department, $status) {
+        $result = User::leftJoin('departments', 'departments.id', '=', 'users.department')
+            ->where(function ($q) use ($name, $department, $status) {
                 $q->where(function ($query) use ($department) {
                     if ($department) {
                         $query->whereIn('department', $department);
@@ -92,6 +93,7 @@ class User extends Authenticatable implements JWTSubject
                     }
                 });
             })
+            ->select('users.*', 'departments.departmentName')
             ->get();
         return $result;
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Storage;
 use JWTAuth;
 use App\User;
 use App\Department;
@@ -200,12 +201,28 @@ class UserController extends Controller
         }
     }
 
-    public function getDetailUser()
+    public function getDetailUser($userId)
     {
+        if (!$userId) {
+            $code = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = 'userId is null';
+            return response()->json($message, $code);
+        }
+
         $data = User::select('users.*', 'de.departmentName')
             ->leftJoin('departments as de', 'de.id', '=', 'users.department')
+            ->where('users.id', $userId)
             ->first();
-        return response()->json($data, 200);
+
+        if ($data) {
+            $data['authority'] = User::getAuthority($userId);
+            $code = config('constants.http_status.HTTP_GET_SUCCESS');
+            return response()->json($data, $code);
+        } else {
+            $code = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
+            $message = 'get detail user error';
+            return response()->json($message, $code);
+        }
     }
 
     public function addUsers()
@@ -365,32 +382,41 @@ class UserController extends Controller
     {
 //        $login_user = JWTAuth::parseToken()->authenticate();
         $validate =  Validator::make(Request::all(), [
-            "userId" => 'required',
+            "id" => 'required',
             'userName' => 'required|min:6|max:255',
             'email' => 'required|email',
-            'department' => 'required',
+            'department' => 'required'
         ]);
 
         if ($validate->fails()) {
             $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
-            $message = trans('userId is null');
+            $message = trans('validate fail');
             return response()->json($message, $status);
         }
 
         // find user
-        $user = User::find(Request::input('userId'));
+        $user = User::find(Request::input('id'));
         if (!$user) {
             $status = config('constants.http_status.HTTP_INTERNAL_SERVER_ERROR');
             $message = trans('user not found');
             return response()->json($message, $status);
         } else {
+            $avatarOld = $user->avatar;
+
             $user->userName = Request::input('userName');
             $user->email = Request::input('email');
             $user->department = Request::input('department');
+            $user->avatar = Request::input('avatar') ? Request::input('avatar') : '';
 
             $result = $user->save();
 
             if ($result) {
+                if ($avatarOld) {
+                    if (Storage::exists('public/avatar/' . $avatarOld)) {
+                        Storage::delete('public/avatar/' . $avatarOld);
+                    }
+                }
+
                 $status = config('constants.http_status.HTTP_POST_SUCCESS');
                 $message = trans('update user success');
                 return response()->json($message, $status);
@@ -400,5 +426,23 @@ class UserController extends Controller
                 return response()->json($message, $status);
             }
         }
+    }
+
+    public function uploadUserAvatar() {
+        $file = Request::file('image');
+        if ($file) {
+            $file->storeAs('/public/avatar', $file->getClientOriginalName());
+        }
+    }
+
+    public function removeUserAvatar()
+    {
+        $avatar = Request::input('avatar');
+        if ($avatar && Storage::exists('public/avatar/' . $avatar)) {
+            Storage::delete('public/avatar/' . $avatar);
+        }
+        $status = config('constants.http_status.HTTP_POST_SUCCESS');
+        $message = trans('remove avatar url content');
+        return response()->json($message, $status);
     }
 }
