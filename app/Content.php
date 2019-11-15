@@ -82,10 +82,8 @@ class Content extends Model
             ->leftJoin('users', 'users.id', '=', 'contents.user_created')
             ->where(function ($query) use ($loginUser, $userId) {
 
-                if ($loginUser->id === $userId) {
-                    $query->where(function ($q) use ($userId) {
-                        $q->where('contents.public', 0)->where('contents.user_created', $userId);
-                    })->orWhere('contents.public', 1);
+                if ($userId && $loginUser->id == $userId) {
+                    $query->where('contents.public', 0)->where('contents.user_created', $userId)->orWhere('contents.public', 1);
                 } else {
                     $query->where('contents.public', 1);
                 }
